@@ -44,3 +44,10 @@ cl
 gofm(cl)
 #add confidence intervals
 ci <- confint(cl,level=0.95)
+
+
+##check for the distribution of choices of scenarios with different payment levels
+chosen <- subset(pretest_dataset,RES==TRUE)
+require(ggplot2)
+dist_pay <- ggplot(chosen,aes(price)) + geom_bar()
+dist_pay
