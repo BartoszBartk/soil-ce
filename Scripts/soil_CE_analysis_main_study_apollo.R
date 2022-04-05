@@ -14,7 +14,7 @@ require(apollo)
 require(here)
 
 #read in dataset already formatted for analysis
-#the original dataset is available at https://maps.bonares.de/mapapps/resources/apps/bonares/index.html?lang=en&mid=cc787645-47d2-41a8-af10-b699a64d7b3b, citable as Bartkowski et al. (2021): German public's preferences for soil-based ecosystem services (discrete choice experiment). DOI:10.13039/501100002347
+#the original dataset is available at https://doi.org/10.20387/bonares-77fb-p034, citable as Bartkowski et al. (2021): German public's preferences for soil-based ecosystem services (discrete choice experiment). DOI:10.13039/501100002347
 #the dataset used here has already been cleaned by removing protest votes (see script cleaning_protest_votes.R in the GitHub repository)
 ce_main_dataset <- read.csv(paste0(here(),"/Data/BonaRes_CE_results_clean.csv"),header=T)
 
