@@ -4,6 +4,7 @@
 # authors: Bartosz Bartkowski, Julian Massenberg, Nele Lienhoop
 # contact: bartosz.bartkowski@ufz.de
 # This script can be found at https://github.com/BartoszBartk/soil-ce 
+# Note: final analyses were conducted in apollo package (see script in same Github repository/folder)
 ############################
 
 #manually install older version of mlogit due to issues with newer version ('gmnl' requires mlogit.data(), which has been deprecated by 'mlogit')
