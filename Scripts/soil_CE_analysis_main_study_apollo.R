@@ -14,7 +14,7 @@ require(apollo)
 require(here)
 
 #read in dataset already formatted for analysis
-#the original dataset is available at https://doi.org/10.20387/bonares-77fb-p034, citable as Bartkowski et al. (2021): German public's preferences for soil-based ecosystem services (discrete choice experiment). DOI:10.13039/501100002347
+#the original dataset is available at https://maps.bonares.de/mapapps/resources/apps/bonares/index.html?lang=en&mid=cc787645-47d2-41a8-af10-b699a64d7b3b, citable as Bartkowski et al. (2021): German public's preferences for soil-based ecosystem services (discrete choice experiment). DOI:10.13039/501100002347
 #the dataset used here has already been cleaned by removing protest votes (see script cleaning_protest_votes.R in the GitHub repository)
 ce_main_dataset <- read.csv(paste0(here(),"/Data/BonaRes_CE_results_clean.csv"),header=T)
 
@@ -136,16 +136,16 @@ apollo_fixed <- "asc_1"
 apollo_draws = list(
   interDrawsType = "sobol",
   interNDraws = 1000,
-  interNormDraws = c("draws_price_inter","draws_ES_inter")
+  interNormDraws = c("draws_price_inter","draws_drought_inter","draws_flood_inter","draws_climate_inter","draws_water_inter")
 )
 
 #define random coefficients
 apollo_randCoeff = function(apollo_beta,apollo_inputs){
   randcoeff = list()
-  randcoeff[["b_drought"]] = mu_b_drought + sigma_b_drought * draws_ES_inter
-  randcoeff[["b_flood"]] = mu_b_flood + sigma_b_flood * draws_ES_inter
-  randcoeff[["b_climate"]] = mu_b_climate + sigma_b_climate * draws_ES_inter
-  randcoeff[["b_water"]] = mu_b_water + sigma_b_water * draws_ES_inter
+  randcoeff[["b_drought"]] = mu_b_drought + sigma_b_drought * draws_drought_inter
+  randcoeff[["b_flood"]] = mu_b_flood + sigma_b_flood * draws_flood_inter
+  randcoeff[["b_climate"]] = mu_b_climate + sigma_b_climate * draws_climate_inter
+  randcoeff[["b_water"]] = mu_b_water + sigma_b_water * draws_water_inter
   randcoeff[["b_price"]] = -exp(mu_log_b_price + sigma_log_b_price * draws_price_inter)
   return(randcoeff)
 }
@@ -219,16 +219,16 @@ apollo_fixed = c("asc_1")
 apollo_draws = list(
   interDrawsType = "sobol",
   interNDraws = 1000,
-  interNormDraws = c("draws_price_inter","draws_ES_inter")
+  interNormDraws = c("draws_price_inter","draws_drought_inter","draws_flood_inter","draws_climate_inter","draws_water_inter")
 )
 
 #define random coefficients
 apollo_randCoeff = function(apollo_beta,apollo_inputs){
   randcoeff = list()
-  randcoeff[["b_drought"]] = mu_b_drought + sigma_b_drought * draws_ES_inter
-  randcoeff[["b_flood"]] = mu_b_flood + sigma_b_flood * draws_ES_inter
-  randcoeff[["b_climate"]] = mu_b_climate + sigma_b_climate * draws_ES_inter
-  randcoeff[["b_water"]] = mu_b_water + sigma_b_water * draws_ES_inter
+  randcoeff[["b_drought"]] = mu_b_drought + sigma_b_drought * draws_drought_inter
+  randcoeff[["b_flood"]] = mu_b_flood + sigma_b_flood * draws_flood_inter
+  randcoeff[["b_climate"]] = mu_b_climate + sigma_b_climate * draws_climate_inter
+  randcoeff[["b_water"]] = mu_b_water + sigma_b_water * draws_water_inter
   randcoeff[["b_price"]] = -exp(mu_log_b_price + sigma_log_b_price * draws_price_inter)
   return(randcoeff)
 }
@@ -335,16 +335,16 @@ apollo_fixed <- "asc_1"
 apollo_draws = list(
   interDrawsType = "sobol",
   interNDraws = 1000,
-  interNormDraws = c("draws_price_inter","draws_ES_inter")
+  interNormDraws = c("draws_price_inter","draws_drought_inter","draws_flood_inter","draws_climate_inter","draws_water_inter")
 )
 
 #define random coefficients
 apollo_randCoeff = function(apollo_beta,apollo_inputs){
   randcoeff = list()
-  randcoeff[["b_drought"]] = mu_b_drought + sigma_b_drought * draws_ES_inter
-  randcoeff[["b_flood"]] = mu_b_flood + sigma_b_flood * draws_ES_inter
-  randcoeff[["b_climate"]] = mu_b_climate + sigma_b_climate * draws_ES_inter
-  randcoeff[["b_water"]] = mu_b_water + sigma_b_water * draws_ES_inter
+  randcoeff[["b_drought"]] = mu_b_drought + sigma_b_drought * draws_drought_inter
+  randcoeff[["b_flood"]] = mu_b_flood + sigma_b_flood * draws_flood_inter
+  randcoeff[["b_climate"]] = mu_b_climate + sigma_b_climate * draws_climate_inter
+  randcoeff[["b_water"]] = mu_b_water + sigma_b_water * draws_water_inter
   randcoeff[["b_price"]] = -exp(mu_log_b_price + sigma_log_b_price * draws_price_inter)
   return(randcoeff)
 }
@@ -436,16 +436,16 @@ apollo_fixed <- "asc_1"
 apollo_draws = list(
   interDrawsType = "sobol",
   interNDraws = 1000,
-  interNormDraws = c("draws_price_inter","draws_ES_inter")
+  interNormDraws = c("draws_price_inter","draws_drought_inter","draws_flood_inter","draws_climate_inter","draws_water_inter")
 )
 
 #define random coefficients
 apollo_randCoeff = function(apollo_beta,apollo_inputs){
   randcoeff = list()
-  randcoeff[["b_drought"]] = mu_b_drought + sigma_b_drought * draws_ES_inter
-  randcoeff[["b_flood"]] = mu_b_flood + sigma_b_flood * draws_ES_inter
-  randcoeff[["b_climate"]] = mu_b_climate + sigma_b_climate * draws_ES_inter
-  randcoeff[["b_water"]] = mu_b_water + sigma_b_water * draws_ES_inter
+  randcoeff[["b_drought"]] = mu_b_drought + sigma_b_drought * draws_drought_inter
+  randcoeff[["b_flood"]] = mu_b_flood + sigma_b_flood * draws_flood_inter
+  randcoeff[["b_climate"]] = mu_b_climate + sigma_b_climate * draws_climate_inter
+  randcoeff[["b_water"]] = mu_b_water + sigma_b_water * draws_water_inter
   randcoeff[["b_price"]] = -exp(mu_log_b_price + sigma_log_b_price * draws_price_inter)
   return(randcoeff)
 }
