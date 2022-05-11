@@ -11,7 +11,7 @@ Design
 ;alg = mfederov                             ?Modified Fedorov algorithm applied (see also below)
 
 ;model:                                     ? specifying Bayesian priors in the form:(n,mean,stdev)
-U(alt1) = b1[(n,0.0099,0.0572)]*drought[80,90,100]  +  b2[(n,0.0121,0.0566)]*flood[80,90,100] + b3[(n,0.0193,0.0369)]*climate[75,100] + b4[(n,0.0208,0.0235)]*water[50,75,100] + b5[(n,-0.013,0.0120)]*price[25,50,75,100,125,150] /
+U(alt1) = b1[(n,0.0001,0.00003)]*drought[80,90,100]  +  b2[(n,0.0001,0.00003)]*flood[80,90,100] + b3[(n,0.0001,0.00003)]*climate[75,100] + b4[(n,0.0001,0.00003)]*water[50,75,100] + b5[(n,-0.01,0.003)]*price[25,50,75,100,125,150] /
 U(alt2) = b1*drought + b2*flood + b3*climate + b4*water + b5*price
 $
 
