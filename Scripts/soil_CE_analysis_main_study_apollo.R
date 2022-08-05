@@ -488,3 +488,11 @@ apollo_modelOutput(mxl_sq,
 #write output
 apollo_saveOutput(mxl_sq,
                   saveOutput_settings=list(printPVal=1))
+
+##Calculate WTP with help of Delta method
+mxl_sq <- apollo_loadModel("soil_CE_mxl_sq")
+deltaMethod_settings=list(expression=c(wtp_drought="-mu_b_drought/exp(mu_log_b_price+(sigma_log_b_price^2)/2)",
+                                       wtp_flood="-mu_b_flood/exp(mu_log_b_price+(sigma_log_b_price^2)/2)",
+                                       wtp_climate="-mu_b_climate/exp(mu_log_b_price+(sigma_log_b_price^2)/2)",
+                                       wtp_water="-mu_b_water/exp(mu_log_b_price+(sigma_log_b_price^2)/2)"))
+apollo_deltaMethod(mxl_sq,deltaMethod_settings)
