@@ -496,3 +496,276 @@ deltaMethod_settings=list(expression=c(wtp_drought="-mu_b_drought/exp(mu_log_b_p
                                        wtp_climate="-mu_b_climate/exp(mu_log_b_price+(sigma_log_b_price^2)/2)",
                                        wtp_water="-mu_b_water/exp(mu_log_b_price+(sigma_log_b_price^2)/2)"))
 apollo_deltaMethod(mxl_sq,deltaMethod_settings)
+
+############################### hybrid choice model to explain SQ choices
+apollo_control = list(
+  modelName = "soil_CE_hcm_sq",
+  modelDescr = "Discrete choice experiment into preferences for soil-based ecosystem services",
+  indivID = "ID",
+  mixing = TRUE,
+  nCores = 3,
+  seed=2104
+)
+
+#transform data on self-reported variables (centering to zero)
+database$knowledge <- database$knowledge-mean(database$knowledge)
+database$awareness <- database$awareness-mean(database$awareness)
+
+#define starting values (using previous results from analyses with gmnl package)
+apollo_beta <- c(
+  asc_1 = 0,
+  asc_2 = 0,
+  asc_3 = 0,
+  mu_b_drought = 0.01,
+  mu_b_flood = 0.01,
+  mu_b_climate = 0.01,
+  mu_b_water = 0.01,
+  mu_log_b_price = -1,
+  sigma_b_drought = 0.01,
+  sigma_b_flood = 0.01,
+  sigma_b_climate = 0.01,
+  sigma_b_water = 0.01,
+  sigma_log_b_price = 1.5,
+  lambda = 0,
+  gamma_abi = 0,
+  gamma_age = 0,
+  gamma_donation = 0,
+  gamma_gender = 0,
+  gamma_income = 0,
+  gamma_member = 0,
+  gamma_no_ag = 0,
+  gamma_urban = 0,
+  zeta_knowledge = 1,
+  zeta_awareness = 1,
+  sigma_knowledge = 1,
+  sigma_awareness = 1
+)
+
+#set fixed 0 coefficients (here: only one of the alternative-specific constants; asc_1 rather than the SQ alternative in order to be able to later interact the SQ alternative with individual variables)
+apollo_fixed <- "asc_1"
+
+#define parameters for the simulation
+apollo_draws = list(
+  interDrawsType = "sobol",
+  interNDraws = 1000,
+  interNormDraws = c("draws_price_inter","draws_drought_inter","draws_flood_inter","draws_climate_inter","draws_water_inter","eta")
+)
+
+#define random coefficients
+apollo_randCoeff = function(apollo_beta,apollo_inputs){
+  randcoeff = list()
+  randcoeff[["b_drought"]] = mu_b_drought + sigma_b_drought * draws_drought_inter
+  randcoeff[["b_flood"]] = mu_b_flood + sigma_b_flood * draws_flood_inter
+  randcoeff[["b_climate"]] = mu_b_climate + sigma_b_climate * draws_climate_inter
+  randcoeff[["b_water"]] = mu_b_water + sigma_b_water * draws_water_inter
+  randcoeff[["b_price"]] = -exp(mu_log_b_price + sigma_log_b_price * draws_price_inter)
+  randcoeff[["LV"]] = gamma_abi*abi + gamma_age*age + gamma_donation*donation + gamma_gender*gender + gamma_income*income_ + gamma_member*member + gamma_no_ag*no_ag + gamma_urban*urban + eta
+  return(randcoeff)
+}
+
+#validate inputs
+apollo_inputs <- apollo_validateInputs()
+
+#define model (for details, see apollo documentation)
+apollo_probabilities = function(apollo_beta,apollo_inputs,functionality="estimate"){
+  apollo_attach(apollo_beta,apollo_inputs)
+  on.exit(apollo_detach(apollo_beta,apollo_inputs))
+  P = list()
+  
+  #likelihood of indicators
+  normalDensity_settings1 = list(outcomeNormal = awareness, 
+                                 xNormal       = zeta_awareness*LV, 
+                                 mu            = 0, 
+                                 sigma         = sigma_awareness, 
+                                 rows          = (QES==1),
+                                 componentName = "indic_awareness")
+  normalDensity_settings2 = list(outcomeNormal = knowledge, 
+                                 xNormal       = zeta_knowledge*LV, 
+                                 mu            = 0, 
+                                 sigma         = sigma_knowledge, 
+                                 rows          = (QES==1),
+                                 componentName = "indic_knowledge")
+  P[["indic_awareness"]] = apollo_normalDensity(normalDensity_settings1, functionality)
+  P[["indic_knowledge"]] = apollo_normalDensity(normalDensity_settings2, functionality)
+  
+  #define SQ ASC interactions
+#  asc_3_value = asc_3 + asc_3_abi * abi + asc_3_age * age + asc_3_awareness * awareness + asc_3_donation * donation + asc_3_gender * gender + asc_3_income * income_ + asc_3_knowledge * knowledge + asc_3_member * member + asc_3_no_ag * no_ag + asc_3_urban * urban
+  
+  V = list()
+  V[['alt1']] = asc_1 + b_drought * drought.1 + b_flood * flood.1 + b_climate * climate.1 + b_water * water.1 + b_price * price.1 + lambda*LV
+  V[['alt2']] = asc_2 + b_drought * drought.2 + b_flood * flood.2 + b_climate * climate.2 + b_water * water.2 + b_price * price.2 + lambda*LV
+  V[['alt3']] = asc_3 + b_drought * drought.3 + b_flood * flood.3 + b_climate * climate.3 + b_water * water.3 + b_price * price.3
+  
+  mnl_settings = list(
+    alternatives = c(alt1=1,alt2=2,alt3=3),
+    choiceVar = choice,
+    V = V,
+    componentName = "choice"
+  ) 
+  #model components
+  P[["choice"]] = apollo_mnl(mnl_settings,functionality)
+  P = apollo_combineModels(P, apollo_inputs, functionality)
+  P = apollo_panelProd(P,apollo_inputs,functionality)
+  P = apollo_avgInterDraws(P,apollo_inputs,functionality)
+  P = apollo_prepareProb(P,apollo_inputs,functionality)
+  return(P)
+}
+
+#estimate model
+hcm_sq <- apollo_estimate(apollo_beta,apollo_fixed,apollo_probabilities,apollo_inputs)
+
+#show output
+apollo_modelOutput(hcm_sq,
+                   modelOutput_settings=list(printPVal=1))
+#write output
+apollo_saveOutput(hcm_sq,
+                  saveOutput_settings=list(printPVal=1))
+
+############################## hybrid choice model with latent variable interactions to explain heterogeneity in ES preference estimates
+apollo_control = list(
+  modelName = "soil_CE_hcm_het",
+  modelDescr = "Discrete choice experiment into preferences for soil-based ecosystem services",
+  indivID = "ID",
+  mixing = TRUE,
+  nCores = 3,
+  seed=2104
+)
+
+#transform data on self-reported variables (centering to zero)
+database$exp_drought <- database$exp_drought-mean(database$exp_drought)
+database$exp_flood <- database$exp_flood-mean(database$exp_flood)
+
+#define starting values (using previous results from analyses with gmnl package)
+apollo_beta <- c(
+  asc_1 = 0,
+  asc_2 = 0,
+  asc_3 = 0,
+  mu_b_drought = 0.01,
+  mu_b_flood = 0.01,
+  mu_b_climate = 0.01,
+  mu_b_water = 0.01,
+  mu_log_b_price = -1,
+  sigma_b_drought = 0.01,
+  sigma_b_flood = 0.01,
+  sigma_b_climate = 0.01,
+  sigma_b_water = 0.01,
+  sigma_log_b_price = 1.5,
+  lambda_know_aw = 0,
+  lambda_exp_drought = 0,
+  lambda_exp_flood = 0,
+  gamma_abi = 0,
+  gamma_age = 0,
+  gamma_donation = 0,
+  gamma_gender = 0,
+  gamma_income = 0,
+  gamma_member = 0,
+  gamma_no_ag = 0,
+  gamma_urban = 0,
+  zeta_knowledge = 1,
+  zeta_awareness = 1,
+  zeta_exp_drought = 1,
+  zeta_exp_flood = 1,
+  sigma_knowledge = 1,
+  sigma_awareness = 1,
+  sigma_exp_drought = 1,
+  sigma_exp_flood = 1
+)
+
+#set fixed 0 coefficients (here: only one of the alternative-specific constants)
+apollo_fixed <- "asc_1"
+
+#define parameters for the simulation
+apollo_draws = list(
+  interDrawsType = "sobol",
+  interNDraws = 1000,
+  interNormDraws = c("draws_price_inter","draws_drought_inter","draws_flood_inter","draws_climate_inter","draws_water_inter","eta_1","eta_2","eta_3")
+)
+
+#define random coefficients
+apollo_randCoeff = function(apollo_beta,apollo_inputs){
+  randcoeff = list()
+  randcoeff[["b_drought"]] = mu_b_drought + sigma_b_drought * draws_drought_inter
+  randcoeff[["b_flood"]] = mu_b_flood + sigma_b_flood * draws_flood_inter
+  randcoeff[["b_climate"]] = mu_b_climate + sigma_b_climate * draws_climate_inter
+  randcoeff[["b_water"]] = mu_b_water + sigma_b_water * draws_water_inter
+  randcoeff[["b_price"]] = -exp(mu_log_b_price + sigma_log_b_price * draws_price_inter)
+  randcoeff[["LV_know_aw"]] = gamma_abi*abi + gamma_age*age + gamma_donation*donation + gamma_gender*gender + gamma_income*income_ + gamma_member*member + gamma_no_ag*no_ag + gamma_urban*urban + eta_1
+  randcoeff[["LV_exp_drought"]] = gamma_abi*abi + gamma_age*age + gamma_donation*donation + gamma_gender*gender + gamma_income*income_ + gamma_member*member + gamma_no_ag*no_ag + gamma_urban*urban + eta_2
+  randcoeff[["LV_exp_flood"]] = gamma_abi*abi + gamma_age*age + gamma_donation*donation + gamma_gender*gender + gamma_income*income_ + gamma_member*member + gamma_no_ag*no_ag + gamma_urban*urban + eta_3
+  return(randcoeff)
+}
+
+#validate inputs
+apollo_inputs <- apollo_validateInputs()
+
+#define model (for details, see apollo documentation)
+apollo_probabilities = function(apollo_beta,apollo_inputs,functionality="estimate"){
+  apollo_attach(apollo_beta,apollo_inputs)
+  on.exit(apollo_detach(apollo_beta,apollo_inputs))
+  P = list()
+  
+  #likelihood of indicators
+  normalDensity_settings1 = list(outcomeNormal = awareness, 
+                                 xNormal       = zeta_awareness*LV_know_aw, 
+                                 mu            = 0, 
+                                 sigma         = sigma_awareness, 
+                                 rows          = (QES==1),
+                                 componentName = "indic_awareness")
+  normalDensity_settings2 = list(outcomeNormal = knowledge, 
+                                 xNormal       = zeta_knowledge*LV_know_aw, 
+                                 mu            = 0, 
+                                 sigma         = sigma_knowledge, 
+                                 rows          = (QES==1),
+                                 componentName = "indic_knowledge")
+  normalDensity_settings3 = list(outcomeNormal = exp_drought, 
+                                 xNormal       = zeta_exp_drought*LV_exp_drought, 
+                                 mu            = 0, 
+                                 sigma         = sigma_exp_drought, 
+                                 rows          = (QES==1),
+                                 componentName = "indic_exp_drought")
+  normalDensity_settings4 = list(outcomeNormal = exp_flood, 
+                                 xNormal       = zeta_exp_flood*LV_exp_flood, 
+                                 mu            = 0, 
+                                 sigma         = sigma_exp_flood, 
+                                 rows          = (QES==1),
+                                 componentName = "indic_exp_flood")
+  P[["indic_awareness"]] = apollo_normalDensity(normalDensity_settings1, functionality)
+  P[["indic_knowledge"]] = apollo_normalDensity(normalDensity_settings2, functionality)
+  P[["indic_exp_drought"]] = apollo_normalDensity(normalDensity_settings3, functionality)
+  P[["indic_exp_flood"]] = apollo_normalDensity(normalDensity_settings4, functionality)
+  
+  #define interaction terms
+  b_drought_value = b_drought + lambda_know_aw*LV_know_aw + lambda_exp_drought*LV_exp_drought
+  b_flood_value = b_flood + lambda_know_aw*LV_know_aw + lambda_exp_flood*LV_exp_flood
+  b_climate_value = b_climate + lambda_know_aw*LV_know_aw
+  b_water_value = b_water + lambda_know_aw*LV_know_aw
+  
+  V = list()
+  V[['alt1']] = asc_1 + b_drought_value * drought.1 + b_flood_value * flood.1 + b_climate_value * climate.1 + b_water_value * water.1 + b_price * price.1
+  V[['alt2']] = asc_2 + b_drought_value * drought.2 + b_flood_value * flood.2 + b_climate_value * climate.2 + b_water_value * water.2 + b_price * price.2
+  V[['alt3']] = asc_3 + b_drought_value * drought.3 + b_flood_value * flood.3 + b_climate_value * climate.3 + b_water_value * water.3 + b_price * price.3
+  
+  mnl_settings = list(
+    alternatives = c(alt1=1,alt2=2,alt3=3),
+    choiceVar = choice,
+    V = V,
+    componentName = "choice"
+  ) 
+  #model components
+  P[["choice"]] = apollo_mnl(mnl_settings,functionality)
+  P = apollo_combineModels(P, apollo_inputs, functionality)
+  P = apollo_panelProd(P,apollo_inputs,functionality)
+  P = apollo_avgInterDraws(P,apollo_inputs,functionality)
+  P = apollo_prepareProb(P,apollo_inputs,functionality)
+  return(P)
+}
+
+#estimate model
+hcm_het <- apollo_estimate(apollo_beta,apollo_fixed,apollo_probabilities,apollo_inputs)
+
+#show output
+apollo_modelOutput(hcm_het,
+                   modelOutput_settings=list(printPVal=1))
+#write output
+apollo_saveOutput(hcm_het,
+                  saveOutput_settings=list(printPVal=1))
