@@ -491,16 +491,16 @@ apollo_saveOutput(mxl_sq,
 
 ##Calculate WTP with help of Delta method
 mxl_sq <- apollo_loadModel("soil_CE_mxl_sq") #the working directory needs to be the one where the model is stored for this to work
-deltaMethod_settings=list(expression=c(wtp_drought="-mu_b_drought/exp(mu_log_b_price+(sigma_log_b_price^2)/2)",
-                                       wtp_flood="-mu_b_flood/exp(mu_log_b_price+(sigma_log_b_price^2)/2)",
-                                       wtp_climate="-mu_b_climate/exp(mu_log_b_price+(sigma_log_b_price^2)/2)",
-                                       wtp_water="-mu_b_water/exp(mu_log_b_price+(sigma_log_b_price^2)/2)"))
+#optionally: calculate mean and SD of the lognormal distribution of the price parameter
+deltaMethod_settings=list(operation="lognormal",
+                          parName1="mu_log_b_price",
+                          parName2="sigma_log_b_price")
 apollo_deltaMethod(mxl_sq,deltaMethod_settings)
-#standard deviations
-deltaMethod_settings=list(expression=c(sd_drought="sigma_b_drought/(exp(mu_log_b_price+(sigma_log_b_price^2)/2)*(exp(sigma_log_b_price^2)-1)^0.5)",
-                                       sd_flood="sigma_b_flood/(exp(mu_log_b_price+(sigma_log_b_price^2)/2)*(exp(sigma_log_b_price^2)-1)^0.5)",
-                                       sd_climate="sigma_b_climate/(exp(mu_log_b_price+(sigma_log_b_price^2)/2)*(exp(sigma_log_b_price^2)-1)^0.5)",
-                                       sd_water="sigma_b_water/(exp(mu_log_b_price+(sigma_log_b_price^2)/2)*(exp(sigma_log_b_price^2)-1)^0.5)"))
+#calculate WTP mean (with formula for moments of the price parameter distribution written out)
+deltaMethod_settings=list(expression=c(wtp_drought="mu_b_drought/exp(mu_log_b_price+(sigma_log_b_price^2)/2)",
+                                       wtp_flood="mu_b_flood/exp(mu_log_b_price+(sigma_log_b_price^2)/2)",
+                                       wtp_climate="mu_b_climate/exp(mu_log_b_price+(sigma_log_b_price^2)/2)",
+                                       wtp_water="mu_b_water/exp(mu_log_b_price+(sigma_log_b_price^2)/2)"))
 apollo_deltaMethod(mxl_sq,deltaMethod_settings)
 
 ############################### hybrid choice model to explain SQ choices
