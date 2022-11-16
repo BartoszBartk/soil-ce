@@ -6,6 +6,21 @@
 # This script can be found at https://github.com/BartoszBartk/soil-ce 
 ############################
 
+############## Outline ###############
+# 1. Packages and data
+# 2. Multinomial logit
+# 3. Simple mixed logit
+# 4. Mixed logit in WTP space
+# 5. Mixed logit with individual-variable interactions to explain heterogeneity in ES preference estimates
+# 6. Mixed logit with SQ interactions
+# 7. Mixed logit in WTP space with SQ interactions
+# 8. Hybrid choice model to explain SQ choices
+# 9. Hybrid choice model with latent variable interactions to explain heterogeneity in ES preference estimates
+######################################
+
+######################
+# 1. Packages and data
+######################
 #optional: clear environment
 rm(list=ls())
 
@@ -44,7 +59,9 @@ database$income_ <- c(500,1250,1750,2250,3000,4250,7000,database$income_)[match(
 #remove original dataset
 rm(ce_main_dataset)
 
-##################################### multinomial logit
+######################
+# 2. Multinomial logit
+######################
 ##implement a simple MNL
 #set required parameters of project
 apollo_control <- list(
@@ -101,7 +118,9 @@ apollo_modelOutput(mnl,
 apollo_saveOutput(mnl,
                   saveOutput_settings=list(printPVal=1))
 
-############################## mixed logit
+#######################
+# 3. Simple mixed logit
+#######################
 ##implement a simple mixed logit model to allow for inter-individual preference heterogeneity
 apollo_control = list(
   modelName = "soil_CE_mxl",
@@ -184,7 +203,9 @@ apollo_modelOutput(mxl,
 apollo_saveOutput(mxl,
                   saveOutput_settings=list(printPVal=1))
 
-############################## mixed logit in WTP space
+#############################
+# 4. Mixed logit in WTP space
+#############################
 ##implement the same simple mixed logit, but in WTP space
 apollo_control = list(
   modelName = "soil_CE_mxl_wtp",
@@ -279,7 +300,9 @@ colnames(condits) <- c("ID","drought.m","drought.sd","flood.m","flood.sd","clima
 #write
 write.csv(condits,paste0(here(),"/conditional_wtps.csv"),row.names=F)
 
-############################## mixed logit with individual-variable interactions to explain heterogeneity in ES preference estimates
+##########################################################################################################
+# 5. Mixed logit with individual-variable interactions to explain heterogeneity in ES preference estimates
+##########################################################################################################
 apollo_control = list(
   modelName = "soil_CE_mxl_het",
   modelDescr = "Discrete choice experiment into preferences for soil-based ecosystem services",
@@ -392,7 +415,9 @@ apollo_modelOutput(mxl_het,
 apollo_saveOutput(mxl_het,
                   saveOutput_settings=list(printPVal=1))
 
-############################## mixed logit with SQ interactions
+######################################
+# 6. Mixed logit with SQ interactions
+#####################################
 apollo_control = list(
   modelName = "soil_CE_mxl_sq",
   modelDescr = "Discrete choice experiment into preferences for soil-based ecosystem services",
@@ -503,7 +528,106 @@ deltaMethod_settings=list(expression=c(wtp_drought="mu_b_drought/exp(mu_log_b_pr
                                        wtp_water="mu_b_water/exp(mu_log_b_price+(sigma_log_b_price^2)/2)"))
 apollo_deltaMethod(mxl_sq,deltaMethod_settings)
 
-############################### hybrid choice model to explain SQ choices
+##################################################
+# 7. Mixed logit in WTP space with SQ interactions
+##################################################
+apollo_control = list(
+  modelName = "soil_CE_mxl_wtp",
+  modelDescr = "Discrete choice experiment into preferences for soil-based ecosystem services",
+  indivID = "ID",
+  mixing = TRUE,
+  nCores = 3,
+  seed=2104
+)
+
+#define starting values (using previous results from analyses with gmnl package)
+apollo_beta <- c(
+  asc_1 = 0,
+  asc_2 = 0,
+  asc_3 = 0,
+  asc_3_gender = 0,
+  asc_3_age = 0,
+  asc_3_urban = 0,
+  asc_3_abi = 0,
+  asc_3_income = 0,
+  asc_3_awareness = 0,
+  asc_3_knowledge = 0,
+  asc_3_no_ag = 0,
+  asc_3_donation = 0,
+  asc_3_member = 0,
+  mu_b_drought = 0.01,
+  mu_b_flood = 0.01,
+  mu_b_climate = 0.01,
+  mu_b_water = 0.01,
+  mu_log_b_price = -1,
+  sigma_b_drought = 0.01,
+  sigma_b_flood = 0.01,
+  sigma_b_climate = 0.01,
+  sigma_b_water = 0.01,
+  sigma_log_b_price = 1.5
+)
+
+#set fixed 0 coefficients (here: only one of the alternative-specific constants)
+apollo_fixed = c("asc_1")
+
+#define parameters for the simulation
+apollo_draws = list(
+  interDrawsType = "sobol",
+  interNDraws = 1000,
+  interNormDraws = c("draws_price_inter","draws_drought_inter","draws_flood_inter","draws_climate_inter","draws_water_inter")
+)
+
+#define random coefficients
+apollo_randCoeff = function(apollo_beta,apollo_inputs){
+  randcoeff = list()
+  randcoeff[["b_drought"]] = mu_b_drought + sigma_b_drought * draws_drought_inter
+  randcoeff[["b_flood"]] = mu_b_flood + sigma_b_flood * draws_flood_inter
+  randcoeff[["b_climate"]] = mu_b_climate + sigma_b_climate * draws_climate_inter
+  randcoeff[["b_water"]] = mu_b_water + sigma_b_water * draws_water_inter
+  randcoeff[["b_price"]] = -exp(mu_log_b_price + sigma_log_b_price * draws_price_inter)
+  return(randcoeff)
+}
+
+#validate inputs
+apollo_inputs <- apollo_validateInputs()
+
+#define model
+apollo_probabilities = function(apollo_beta,apollo_inputs,functionality="estimate"){
+  apollo_attach(apollo_beta,apollo_inputs)
+  on.exit(apollo_detach(apollo_beta,apollo_inputs))
+  P = list()
+  V = list()
+  #define SQ ASC interactions
+  asc_3_value = asc_3 + asc_3_abi * abi + asc_3_age * age + asc_3_awareness * awareness + asc_3_donation * donation + asc_3_gender * gender + asc_3_income * income_ + asc_3_knowledge * knowledge + asc_3_member * member + asc_3_no_ag * no_ag + asc_3_urban * urban
+  #multiply all coefficients by the price coefficient
+  V[['alt1']] = asc_1 + b_price * (b_drought * drought.1 + b_flood * flood.1 + b_climate * climate.1 + b_water * water.1 + price.1)
+  V[['alt2']] = asc_2 + b_price * (b_drought * drought.2 + b_flood * flood.2 + b_climate * climate.2 + b_water * water.2 + price.2)
+  V[['alt3']] = asc_3_value + b_price * (b_drought * drought.3 + b_flood * flood.3 + b_climate * climate.3 + b_water * water.3 + price.3)
+  mnl_settings = list(
+    alternatives = c(alt1=1,alt2=2,alt3=3),
+    choiceVar = choice,
+    V = V
+  ) #model components
+  P[["model"]] = apollo_mnl(mnl_settings,functionality)
+  P = apollo_panelProd(P,apollo_inputs,functionality)
+  P = apollo_avgInterDraws(P,apollo_inputs,functionality)
+  P = apollo_prepareProb(P,apollo_inputs,functionality)
+  return(P)
+}
+
+#estimate model
+mxl_wtp_sq <- apollo_estimate(apollo_beta,apollo_fixed,apollo_probabilities,apollo_inputs)
+
+#show output
+apollo_modelOutput(mxl_wtp_sq,
+                   modelOutput_settings=list(printPVal=1))
+#write output
+apollo_saveOutput(mxl_wtp_sq,
+                  saveOutput_settings=list(printPVal=1))
+
+##############################################
+# 8. Hybrid choice model to explain SQ choices
+##############################################
 apollo_control = list(
   modelName = "soil_CE_hcm_sq",
   modelDescr = "Discrete choice experiment into preferences for soil-based ecosystem services",
@@ -627,7 +751,9 @@ apollo_modelOutput(hcm_sq,
 apollo_saveOutput(hcm_sq,
                   saveOutput_settings=list(printPVal=1))
 
-############################## hybrid choice model with latent variable interactions to explain heterogeneity in ES preference estimates
+##############################################################################################################
+# 9. Hybrid choice model with latent variable interactions to explain heterogeneity in ES preference estimates
+##############################################################################################################
 apollo_control = list(
   modelName = "soil_CE_hcm_het",
   modelDescr = "Discrete choice experiment into preferences for soil-based ecosystem services",
