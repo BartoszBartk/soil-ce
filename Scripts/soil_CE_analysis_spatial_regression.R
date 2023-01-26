@@ -238,58 +238,6 @@ modelsummary(models=splag_water_dist_all,
 # 3.5 Hypothesis 5 Opportunity costs
 ######################
 
-#SQR only with overlap
-splag_opp_dist_all <- lagsarlm(wtp_all ~ SQR + age + gender + edu + income_ + member + donation + no_ag,
-                               data = ce_data,
-                               listw = weights_all,
-                               zero.policy = T, 
-                               na.action = na.omit)
-#save model output to docx file
-modelsummary(models=splag_opp_dist_all,
-             output="Output/splag_opp_dist_all.docx",
-             fmt = 3,
-             estimate = "{estimate} [{conf.low}, {conf.high}]",
-             statistic = "{p.value}")
-
-#SQR with 1-km buffer
-splag_opp_1km_dist_all <- lagsarlm(wtp_all ~ SQR_1km + age + gender + edu + income_ + member + donation + no_ag,
-                                   data = ce_data,
-                                   listw = weights_all,
-                                   zero.policy = T, 
-                                   na.action = na.omit)
-#save model output to docx file
-modelsummary(models=splag_opp_1km_dist_all,
-             output="Output/splag_opp_1km_dist_all.docx",
-             fmt = 3,
-             estimate = "{estimate} [{conf.low}, {conf.high}]",
-             statistic = "{p.value}")
-
-#SQR with 10-km buffer
-splag_opp_10km_dist_all <- lagsarlm(wtp_all ~ SQR_10km + age + gender + edu + income_ + member + donation + no_ag,
-                                    data = ce_data,
-                                    listw = weights_all,
-                                    zero.policy = T, 
-                                    na.action = na.omit)
-#save model output to docx file
-modelsummary(models=splag_opp_10km_dist_all,
-             output="Output/splag_opp_10km_dist_all.docx",
-             fmt = 3,
-             estimate = "{estimate} [{conf.low}, {conf.high}]",
-             statistic = "{p.value}")
-
-#SQR with 20 km buffer
-splag_opp_20km_dist_all <- lagsarlm(wtp_all ~ SQR_20km + age + gender + edu + income_ + member + donation + no_ag,
-                                    data = ce_data,
-                                    listw = weights_all,
-                                    zero.policy = T, 
-                                    na.action = na.omit)
-#save model output to docx file
-modelsummary(models=splag_opp_20km_dist_all,
-             output="Output/splag_opp_20km_dist_all.docx",
-             fmt = 3,
-             estimate = "{estimate} [{conf.low}, {conf.high}]",
-             statistic = "{p.value}")
-
 #SQR with 33 km buffer
 splag_opp_33km_dist_all <- lagsarlm(wtp_all ~ SQR_33km + age + gender + edu + income_ + member + donation + no_ag,
                                     data = ce_data,
@@ -302,6 +250,35 @@ modelsummary(models=splag_opp_33km_dist_all,
              fmt = 3,
              estimate = "{estimate} [{conf.low}, {conf.high}]",
              statistic = "{p.value}")
+
+######### Those would only work for subsets of the dataset (due to NAs in the SQR indicators), which doesn't seem to make sense
+#SQR only with overlap
+splag_opp_dist_all <- lagsarlm(wtp_all ~ SQR + age + gender + edu + income_ + member + donation + no_ag,
+                               data = ce_data,
+                               listw = weights_sqr,
+                               zero.policy = T, 
+                               na.action = na.omit)
+
+#SQR with 1-km buffer
+splag_opp_1km_dist_all <- lagsarlm(wtp_all ~ SQR_1km + age + gender + edu + income_ + member + donation + no_ag,
+                                   data = ce_data,
+                                   listw = weights_all,
+                                   zero.policy = T, 
+                                   na.action = na.omit)
+
+#SQR with 10-km buffer
+splag_opp_10km_dist_all <- lagsarlm(wtp_all ~ SQR_10km + age + gender + edu + income_ + member + donation + no_ag,
+                                    data = ce_data,
+                                    listw = weights_all,
+                                    zero.policy = T, 
+                                    na.action = na.omit)
+
+#SQR with 20 km buffer
+splag_opp_20km_dist_all <- lagsarlm(wtp_all ~ SQR_20km + age + gender + edu + income_ + member + donation + no_ag,
+                                    data = ce_data,
+                                    listw = weights_all,
+                                    zero.policy = T, 
+                                    na.action = na.omit)
 
 ######################
 # 4. Spatial error models
