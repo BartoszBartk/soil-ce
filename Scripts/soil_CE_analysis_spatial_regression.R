@@ -294,6 +294,12 @@ sperr_drought_smi_dist_all <- errorsarlm(drought ~ SMI_Min + age + gender + edu 
                                         listw = weights_all,
                                         zero.policy = T, 
                                         na.action = na.omit)
+#save model output to docx file
+modelsummary(models = sperr_drought_smi_dist_all,
+             output = "Output/sperr_drought_smi_dist_all.docx",
+             fmt = 3,
+             estimate = "{estimate} [{conf.low}, {conf.high}]",
+             statistic = "{p.value}")
 
 ######################
 # 4.2 Hypothesis 2 Flood
@@ -354,6 +360,12 @@ spdurb_drought_smi_dist_all <- lagsarlm(drought ~ SMI_Min + age + gender + edu +
                                         zero.policy = T, 
                                         na.action = na.omit,
                                         Durbin = T)
+#save model output to docx file
+modelsummary(models = spdurb_drought_smi_dist_all,
+             output = "Output/spdurb_drought_smi_dist_all.docx",
+             fmt = 3,
+             estimate = "{estimate} [{conf.low}, {conf.high}]",
+             statistic = "{p.value}")
 
 ######################
 # 5.2 Hypothesis 2 Flood
