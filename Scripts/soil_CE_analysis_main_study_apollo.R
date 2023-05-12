@@ -10,7 +10,7 @@
 # 1. Packages and data
 # 2. Multinomial logit
 # 3. Simple mixed logit
-# 4. Mixed logit in WTP space
+# 4. Mixed logit in WTP space (including derivation of conditionals and diagnostics for those)
 # 5. Mixed logit with individual-variable interactions to explain heterogeneity in ES preference estimates
 # 6. Mixed logit with SQ interactions
 # 7. Mixed logit in WTP space with SQ interactions
@@ -299,6 +299,31 @@ condits <- condits[,c(1,2,3,5,6,8,9,11,12)]
 colnames(condits) <- c("ID","drought.m","drought.sd","flood.m","flood.sd","climate.m","climate.sd","water.m","water.sd")
 #write
 write.csv(condits,paste0(here(),"/conditional_wtps.csv"),row.names=F)
+
+##diagnostics based on Sarrias (2020): Individual-specific posterior distributions from Mixed Logit models: Properties, limitations and diagnostic checks
+#calculate unconditionals
+unconditionals <- apollo_unconditionals(mxl_wtp, apollo_probabilities, apollo_inputs)
+##compare pairwise
+#drought
+mean(unconditionals[["b_drought"]]) #-0.341
+sd(unconditionals[["b_drought"]]) #0.300
+summary(conditionals[["b_drought"]]) #-0.340 / 0.291
+ratio_drought <- mean(conditionals$b_drought[,2])/mean(unconditionals[["b_drought"]])
+#flood
+mean(unconditionals[["b_flood"]]) #-0.175
+sd(unconditionals[["b_flood"]]) #0.907
+summary(conditionals[["b_flood"]]) #-0.179 / 0.858
+ratio_flood <- mean(conditionals$b_flood[,2])/mean(unconditionals[["b_flood"]])
+#climate
+mean(unconditionals[["b_climate"]]) #-0.368
+sd(unconditionals[["b_climate"]]) #0.809
+summary(conditionals[["b_climate"]]) #-0.376 / 0.737
+ratio_climate <- mean(conditionals$b_climate[,2])/mean(unconditionals[["b_climate"]])
+#water
+mean(unconditionals[["b_water"]]) #-1.842
+sd(unconditionals[["b_water"]]) #2.560
+summary(conditionals[["b_water"]]) #-1.884 / 1.571
+ratio_water <- mean(conditionals$b_water[,2])/mean(unconditionals[["b_water"]])
 
 ##########################################################################################################
 # 5. Mixed logit with individual-variable interactions to explain heterogeneity in ES preference estimates
