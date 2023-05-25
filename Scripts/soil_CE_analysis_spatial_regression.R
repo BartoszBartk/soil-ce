@@ -11,6 +11,7 @@
 # 3. Spatial lag models
 # 4. Spatial error models
 # 5. Spatial Durbin models
+# 6. MXL model with interactions of the spatial data with Es attributes
 ######################################
 
 ######################
@@ -414,3 +415,138 @@ spdurb_opp_33km_dist_all <- lagsarlm(wtp_all ~ SQR_33km + age + gender + edu + i
                                      zero.policy = T, 
                                      na.action = na.omit,
                                      Durbin = T)
+
+######################
+# 6. MXL model with interactions of the spatial data with ES attributes
+######################
+
+#load Apollo package
+require(apollo)
+
+#read in dataset already formatted for analysis
+ce_main_dataset <- read.csv(here("Data/BonaRes_CE_results_clean.csv"),header=T)
+
+#add spatial variables
+elbe <- read.csv(here("Spatial data/plz_elbe.csv"), header = T, sep = ";")
+ce_data$elbe <- ifelse(ce_data$plz %in% elbe$PLZ_5, TRUE, FALSE)
+ce_data_spatial <- ce_data[,c("ID","SQR_33km","howas","DIM2014","SMI_Min","Nitrate_RG","elbe")]
+ce_main_dataset <- merge(ce_main_dataset, ce_data_spatial, by = "ID")
+
+#initialize apollo package
+apollo_initialise()
+
+#create database by reshaping dataset to wide format as required by apollo
+database <- reshape(ce_main_dataset,
+                    idvar="STR",
+                    timevar="ALT",
+                    v.names=c("drought","flood","climate","water","price","RES"),
+                    drop=c("X","ASC"),
+                    direction="wide")
+
+#add choice variable indicating which alternative was chosen
+database$choice <- ifelse(
+  database$RES.1==TRUE,1,ifelse(
+    database$RES.2==TRUE,2,3
+  ))
+
+#add modified variables
+#abi (binary variable of educational achievement)
+database$abi <- ifelse(database$edu=="abitur" | database$edu=="university",1,0)
+#income: take middle points of brackets as proxies for continuous income (for highest bracket, ca. double the mean net income in Germany [3580 according to Destatis])
+database$income_ <- c(500,1250,1750,2250,3000,4250,7000,database$income_)[match(database$income,c("below_1000","1000_1500","1500_2000","2000_2500","2500_3500","3500_5000","5000_above",database$income))]
+
+apollo_control = list(
+  modelName = "soil_CE_mxl_spatial",
+  modelDescr = "Discrete choice experiment into preferences for soil-based ecosystem services",
+  indivID = "ID",
+  mixing = TRUE,
+  nCores = 3,
+  seed = 2104
+)
+
+#define starting values (using previous results from analyses with gmnl package)
+apollo_beta <- c(
+  asc_1 = 0,
+  asc_2 = 0,
+  asc_3 = 0,
+  mu_b_drought = 0.01,
+  mu_b_flood = 0.01,
+  mu_b_climate = 0.01,
+  mu_b_water = 0.01,
+  mu_log_b_price = -1,
+  sigma_b_drought = 0.01,
+  sigma_b_flood = 0.01,
+  sigma_b_climate = 0.01,
+  sigma_b_water = 0.01,
+  sigma_log_b_price = 1.5,
+  b_SMI_drought = 0,
+  b_howas_flood = 0,
+  b_elbe_flood = 0,
+  b_SMI_climate = 0,
+  b_howas_climate = 0,
+  b_nitrate_water = 0
+)
+
+#set fixed 0 coefficients (here: only one of the alternative-specific constants)
+apollo_fixed <- "asc_1"
+
+#define parameters for the simulation
+apollo_draws = list(
+  interDrawsType = "sobol",
+  interNDraws = 1000,
+  interNormDraws = c("draws_price_inter","draws_drought_inter","draws_flood_inter","draws_climate_inter","draws_water_inter")
+)
+
+#define random coefficients
+apollo_randCoeff = function(apollo_beta,apollo_inputs){
+  randcoeff = list()
+  randcoeff[["b_drought"]] = mu_b_drought + sigma_b_drought * draws_drought_inter
+  randcoeff[["b_flood"]] = mu_b_flood + sigma_b_flood * draws_flood_inter
+  randcoeff[["b_climate"]] = mu_b_climate + sigma_b_climate * draws_climate_inter
+  randcoeff[["b_water"]] = mu_b_water + sigma_b_water * draws_water_inter
+  randcoeff[["b_price"]] = -exp(mu_log_b_price + sigma_log_b_price * draws_price_inter)
+  return(randcoeff)
+}
+
+#validate inputs
+apollo_inputs <- apollo_validateInputs()
+
+#define model (for details, see apollo documentation)
+apollo_probabilities = function(apollo_beta,apollo_inputs,functionality="estimate"){
+  apollo_attach(apollo_beta,apollo_inputs)
+  on.exit(apollo_detach(apollo_beta,apollo_inputs))
+  P = list()
+  
+  #define interaction terms
+  b_drought_value = b_drought + b_SMI_drought * SMI_Min
+  b_flood_value = b_flood + b_howas_flood * howas + b_elbe_flood * elbe
+  b_climate_value = b_climate + b_SMI_climate * SMI_Min + b_howas_climate * howas
+  b_water_value = b_water + b_nitrate_water * Nitrate_RG
+  b_price_value = b_price
+  
+  V = list()
+  V[['alt1']] = asc_1 + b_drought_value * drought.1 + b_flood_value * flood.1 + b_climate_value * climate.1 + b_water_value * water.1 + b_price_value * price.1
+  V[['alt2']] = asc_2 + b_drought_value * drought.2 + b_flood_value * flood.2 + b_climate_value * climate.2 + b_water_value * water.2 + b_price_value * price.2
+  V[['alt3']] = asc_3 + b_drought_value * drought.3 + b_flood_value * flood.3 + b_climate_value * climate.3 + b_water_value * water.3 + b_price_value * price.3
+  
+  mnl_settings = list(
+    alternatives = c(alt1=1,alt2=2,alt3=3),
+    choiceVar = choice,
+    V = V
+  ) #model components
+  P[["model"]] = apollo_mnl(mnl_settings,functionality)
+  P = apollo_panelProd(P,apollo_inputs,functionality)
+  P = apollo_avgInterDraws(P,apollo_inputs,functionality)
+  P = apollo_prepareProb(P,apollo_inputs,functionality)
+  return(P)
+}
+
+#estimate model
+mxl_spatial <- apollo_estimate(apollo_beta,apollo_fixed,apollo_probabilities,apollo_inputs)
+
+#show output
+apollo_modelOutput(mxl_spatial,
+                   modelOutput_settings=list(printPVal=1))
+#write output
+apollo_saveOutput(mxl_spatial,
+                  saveOutput_settings=list(printPVal=1))
