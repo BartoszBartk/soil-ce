@@ -22,6 +22,7 @@
 
 #load packages
 require(spdep)
+require(ape) #in the most cases, the more efficient option compared to spdep
 require(here)
 
 #import dataset from CE including individual WTP scores (code for calculation of individual WTP scores from mixed logit in WTP space available in soil_CE_analysis_main_study_apollo.R), coordinates of the postal codes (PLZ) centroids as well as additional data on indicators of drought impacts, flood impacts, groundwater quality and soil quality
@@ -65,7 +66,7 @@ dists_i <- 1/dists #invert
 diag(dists_i) <- 0 #add diagonal
 row_sums <- apply(dists_i,1,sum) #calculate row sums
 dists_i <- dists_i/row_sums #normalize values using row sums
-weights_all <- mat2listw(dists_i,style="W") #reformat to have format readable by spdep
+#weights_all <- mat2listw(dists_i,style="W") #reformat to have format readable by spdep
 
 #inverse-distance weighting for 41494 m range (in line with default settings in ArcGIS)
 dists_40 <- 1/dists
@@ -73,7 +74,7 @@ diag(dists_40) <- 0
 dists_40[dists_40<1/41494] <- 0
 row_sums <- apply(dists_40,1,sum)
 dists_40 <- dists_40/row_sums
-weights_40 <- mat2listw(dists_40,style="W")
+#weights_40 <- mat2listw(dists_40,style="W")
 
 #inverse-distance weighting within (arbitrary) 200000 m range
 dists_200 <- 1/dists
@@ -81,7 +82,7 @@ diag(dists_200) <- 0
 dists_200[dists_200<1/200000] <- 0
 row_sums <- apply(dists_200,1,sum)
 dists_200 <- dists_200/row_sums
-weights_200 <- mat2listw(dists_200,style="W")
+#weights_200 <- mat2listw(dists_200,style="W")
 
 #k-nearest neighbours with k=8
 col.knn <- knearneigh(as.matrix(coords), k = 8)
@@ -92,28 +93,35 @@ weights_knn <- nb2listw(knn2nb(col.knn), zero.policy = T)
 ######################
 
 #spatial autocorrelation with full weighting matrix
-moran.test(wtp_plz$drought, weights_all)
-moran.test(wtp_plz$flood, weights_all)
-moran.test(wtp_plz$climate, weights_all)
-moran.test(wtp_plz$water, weights_all)
+Moran.I(wtp_plz$drought, dists_i)
+Moran.I(wtp_plz$flood, dists_i)
+Moran.I(wtp_plz$climate, dists_i)
+Moran.I(wtp_plz$water, dists_i)
 
 #spatial autocorrelation with 40-km matrix
-moran.test(wtp_plz$drought, weights_40)
-moran.test(wtp_plz$flood, weights_40)
-moran.test(wtp_plz$climate, weights_40)
-moran.test(wtp_plz$water, weights_40)
+Moran.I(wtp_plz$drought, dists_40)
+Moran.I(wtp_plz$flood, dists_40)
+Moran.I(wtp_plz$climate, dists_40)
+Moran.I(wtp_plz$water, dists_40)
 
 #spatial autocorrelation with 200-km matrix
-moran.test(wtp_plz$drought, weights_200)
-moran.test(wtp_plz$flood, weights_200)
-moran.test(wtp_plz$climate, weights_200)
-moran.test(wtp_plz$water, weights_200)
+Moran.I(wtp_plz$drought, dists_200)
+Moran.I(wtp_plz$flood, dists_200)
+Moran.I(wtp_plz$climate, dists_200)
+Moran.I(wtp_plz$water, dists_200)
 
 #spatial autocorrelation with k-nearest neighbours (k=8)
-moran.test(wtp_plz$drought, weights_knn)
-moran.test(wtp_plz$flood, weights_knn)
-moran.test(wtp_plz$climate, weights_knn)
-moran.test(wtp_plz$water, weights_knn)
+moran.test(wtp_plz$drought, weights_knn, alternative = "two.sided")
+moran.test(wtp_plz$flood, weights_knn, alternative = "two.sided")
+moran.test(wtp_plz$climate, weights_knn, alternative = "two.sided")
+moran.test(wtp_plz$water, weights_knn, alternative = "two.sided")
+
+##spdep example
+#spatial autocorrelation with full weighting matrix
+#moran.test(wtp_plz$drought, weights_all, alternative = "two.sided")
+#moran.test(wtp_plz$flood, weights_all, alternative = "two.sided")
+#moran.test(wtp_plz$climate, weights_all, alternative = "two.sided")
+#moran.test(wtp_plz$water, weights_all, alternative = "two.sided")
 
 ######################
 # 5. Robustness check
@@ -158,7 +166,6 @@ dists_i <- 1/dists #invert
 diag(dists_i) <- 0 #add diagonal
 row_sums <- apply(dists_i,1,sum) #calculate row sums
 dists_i <- dists_i/row_sums #normalize values using row sums
-weights <- mat2listw(dists_i,style="W") #reformat to have format readable by spdep
 
 #inverse-distance weighting for 41494 m range (in line with default settings in ArcGIS)
 dists_40 <- 1/dists
@@ -166,20 +173,19 @@ diag(dists_40) <- 0
 dists_40[dists_40<1/41494] <- 0
 row_sums <- apply(dists_40,1,sum)
 dists_40 <- dists_40/row_sums
-weights_40 <- mat2listw(dists_40,style="W")
 
 ######################
 # 5.3. Recalculate Moran's I
 ######################
 
 #spatial autocorrelation with jittered coordinates and full inverse-distance weighting
-moran.test(ce_data$drought, weights)
-moran.test(ce_data$flood, weights)
-moran.test(ce_data$climate, weights)
-moran.test(ce_data$water, weights)
+Moran.I(ce_data$drought, dists_i)
+Moran.I(ce_data$flood, dists_i)
+Moran.I(ce_data$climate, dists_i)
+Moran.I(ce_data$water, dists_i)
 
 #spatial autocorrelation with jittered coordinates and "ArcGIS weighting"
-moran.test(ce_data$drought, weights_40)
-moran.test(ce_data$flood, weights_40)
-moran.test(ce_data$climate, weights_40)
-moran.test(ce_data$water, weights_40)
+Moran.I(ce_data$drought, dists_40)
+Moran.I(ce_data$flood, dists_40)
+Moran.I(ce_data$climate, dists_40)
+Moran.I(ce_data$water, dists_40)
