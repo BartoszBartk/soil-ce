@@ -14,7 +14,7 @@
 # Autumn 2024
 # Contributors: Bartosz Bartkowski, Samuel Fischer
 # Contact: bartosz.bartkowski@ufz.de
-# This script can be found at LINK
+# This script can be found at https://github.com/BartoszBartk/soil-ce/tree/main/BonaRes_test_case
 ############################
 
 require(here)
@@ -62,9 +62,9 @@ bodium_dataset <- subset(bodium_data, Year > 2020)
 
 # recalculate plant biomass values to have them per ha and in tons
 bodium_dataset$Plant_biomass_SO <- bodium_dataset$Plant_biomass_SO * 10000 / 1000
-############# STILL MISSING
+############# TEMPORARY SOLUTION BASED ON ROUGH ESTIMATE OF 1000 kg dry soil / m3
 # recalculate Corg from kg/kg to kg C / ha
-# bodium_dataset$Corg <- bodium_dataset$Corg
+bodium_dataset$Corg <- bodium_dataset$Corg * 20000000
 
 # add columns soil management (conventional vs. conservation), crop rotation (simple vs. diverse) and fertilization (mineral vs. mixed)
 bodium_dataset <- bodium_dataset %>%
@@ -109,33 +109,60 @@ temp_data$tot_wtp <- temp_data$tot_wtp/(1 + p)^(temp_data$Year - min(temp_data$Y
 temp_data_ <- melt(temp_data,
                   id.vars = c("Scenario", "Year"))
 # reorder by year
-temp_data_ <- temp_data[order(temp_data_$Year),]
+temp_data_ <- temp_data_[order(temp_data_$Year),]
 # merge Scenario and variable (GM vs. tot_wtp)
 temp_data_$Scenario <- paste0(temp_data_$Scenario, "_", temp_data_$variable)
 # remove redundant "variable" column
 temp_data_ <- temp_data_ %>% select(-variable)
 
 # reshape to create target dataset
-val_data <- reshape(temp_data_, direction = "wide",
+val_data_ <- reshape(temp_data_, direction = "wide",
                     idvar = "Scenario",
                     timevar = "Year",
                     v.names = "value")
+colnames(val_data_) <- c("Scenario", c(2021:2049))
+val_data_ <- val_data_[order(val_data_$Scenario),]
+
+# add (discounted) sum for each scenario (for comparability, reduce to 24 data points, as crop rotation length is 6 in "diverse")
+val_data_$NPV <- rowSums(val_data_[, c(2:25)])
+val_data_$mean <- rowMeans(val_data_[, c(2:25)])
+val_data_$sd <- apply(val_data_[, c(2:25)], 1, sd)
+
+# ALTERNATIVELY: do the same with temp_data to work with sums of GM & tot_wtp
+temp_data$tot_val <- temp_data$GM + temp_data$tot_wtp
+temp_data <- temp_data %>% select(-c(GM, tot_wtp))
+# reorder by year
+temp_data <- temp_data[order(temp_data$Year),]
+# reshape to create target dataset
+val_data <- reshape(temp_data, direction = "wide",
+                    idvar = "Scenario",
+                    timevar = "Year",
+                    v.names = "tot_val")
 colnames(val_data) <- c("Scenario", c(2021:2049))
 val_data <- val_data[order(val_data$Scenario),]
+# add (discounted) sum for each scenario (24 years only, see explanation above)
+val_data$NPV <- rowSums(val_data[, c(2:25)])
+val_data$mean <- rowMeans(val_data[, c(2:25)])
+val_data$sd <- apply(val_data[, c(2:25)], 1, sd)
 
-# add (discounted) sum for each scenario
-val_data$NPV <- rowSums(val_data[, c(2:29)])
-val_data$mean <- rowMeans(val_data[, c(2:29)])
-val_data$sd <- apply(val_data[, c(2:29)], 1, sd)
-
-# create plots for each scenario/value type combination
-temp_data$tot_val <- temp_data$GM + temp_data$tot_wtp
+## Create plots
+# create plots for each scenario
+# sums
 boxplots <- ggplot(temp_data, aes(x = Scenario, y = tot_val)) + 
   geom_boxplot()
 boxplots
+# separate GM / tot_wtp
+boxplots_ <- ggplot(temp_data_, aes(x = Scenario, y = value)) + 
+  geom_boxplot()
+boxplots_
+# sums
 timeline <- ggplot(temp_data, aes(x = Year, y = tot_val, color = Scenario)) +
   geom_line()
 timeline
+# separate
+timeline_ <- ggplot(temp_data_, aes(x = Year, y = value, color = Scenario)) +
+  geom_line()
+timeline_
 
 # create NPV bar chart across scenarios [CURRENTLY BASED ON val_data; WHICH DOESN'T SUM UP GM AND val_wtp]
 scenario_bars <- ggplot(val_data, aes(x = Scenario, y = NPV)) +
