@@ -5,6 +5,6 @@ The code (and accompanying data) includes two different analysis steps: one, ass
 
 In addition, there is a Folder "BonaRes_test_case", which contains a script for the evaluation of modelling scenarios from the BODIUM soil model using recalculated WTPs from the above DCE and KTBL data on costs and prices of agricultural production.
 
-The study was funded by the German Federal Ministry of Education and Research (BMBF) in the framework of the funding measure “Soil as a Sustainable Resource for the Bioeconomy – BonaRes”, project “BonaRes (Module B): BonaRes Centre for Soil Research, subproject A” (grant 031B0511A). The contact person reponsible for all the errors is Bartosz Bartkowski (bartosz.bartkowski@ufz.de) at Helmholtz Centre for Environmental Research - UFZ in Leipzig, Germany.
+The study was funded by the German Federal Ministry of Education and Research (BMBF) in the framework of the funding measure “Soil as a Sustainable Resource for the Bioeconomy – BonaRes”, project “BonaRes (Module B): BonaRes Centre for Soil Research, subproject A” (grant 031B0511A). The contact person reponsible for all the errors is Bartosz Bartkowski (bartosz.bartkowski@ufz.de) at Helmholtz Centre for Environmental Research – UFZ in Leipzig, Germany.
 
-Contributors: Bartosz Bartkowski (bartosz.bartkowski@ufz.de), Julian Massenberg, Lukas Mahlich, Samuel Fischer
+Contributors: Bartosz Bartkowski, Julian Massenberg, Lukas Mahlich, Samuel Fischer
