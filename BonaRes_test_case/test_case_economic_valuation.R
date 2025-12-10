@@ -141,13 +141,15 @@ val_data <- val_data[order(val_data$Scenario),]
 
 # add net present value (sum of discounted values)
 val_data$NPV <- rowSums(val_data[, c(3:32)])
-val_data2 <- val_data[val_data$Group != "tot_wtp", ] #leave out tot_wtp (only for visualization purposes)
+val_data2 <- subset(val_data, Group != "tot_wtp" & Group != "tot_val") #leave out tot_wtp and tot_val (only for visualization purposes)
 
 ## create dataset for final overview of economic analysis
 # recreate the individual scenario components
-val_data3 <- val_data %>%
+val_data3 <- val_data2 %>%
   separate(Scenario, into = c("Management", "Rotation", "RCP", "Site", "Precipitation"), sep = "\\.", remove = F)
 # select only relevant variables, first restricting them to tot_val
+val_data4 <- val_data %>%
+  separate(Scenario, into = c("Management", "Rotation", "RCP", "Site", "Precipitation"), sep = "\\.", remove = F)
 val_data4 <- subset(val_data3, Group == "tot_val")
 val_data4 <- subset(val_data4, select = c("Scenario", "Site", "Management", "Rotation", "RCP", "Precipitation", "NPV"))
 # create and order individual subsets for each site
